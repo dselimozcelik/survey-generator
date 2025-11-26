@@ -9,6 +9,10 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
   const [options, setOptions] = useState(
     question?.options || ['', '']
   );
+  const [minScale, setMinScale] = useState(question?.minScale || 1);
+  const [maxScale, setMaxScale] = useState(question?.maxScale || 5);
+  const [minLabel, setMinLabel] = useState(question?.minLabel || '');
+  const [maxLabel, setMaxLabel] = useState(question?.maxLabel || '');
 
   useEffect(() => {
     if (question) {
@@ -16,6 +20,10 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
       setQuestionText(question.text);
       setRequired(question.required || false);
       setOptions(question.options || ['', '']);
+      setMinScale(question.minScale || 1);
+      setMaxScale(question.maxScale || 5);
+      setMinLabel(question.minLabel || '');
+      setMaxLabel(question.maxLabel || '');
     }
   }, [question]);
 
@@ -39,29 +47,42 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
     e.preventDefault();
     
     if (!questionText.trim()) {
-      alert('Lütfen soru metnini girin');
+      alert('Please enter the question text');
       return;
     }
 
-    if (questionType === 'multiple-choice' || questionType === 'multiple-select') {
+    const baseQuestion = {
+      type: questionType,
+      text: questionText.trim(),
+      required,
+    };
+
+    // Handle different question types
+    if (questionType === 'multiple-choice' || questionType === 'multiple-select' || questionType === 'dropdown') {
       const validOptions = options.filter((opt) => opt.trim());
       if (validOptions.length < 2) {
-        alert('Lütfen en az 2 seçenek girin');
+        alert('Please enter at least 2 options');
         return;
       }
-
       onSave({
-        type: questionType,
-        text: questionText.trim(),
-        required,
+        ...baseQuestion,
         options: validOptions,
       });
-    } else {
+    } else if (questionType === 'rating-scale' || questionType === 'linear-scale') {
+      if (maxScale <= minScale) {
+        alert('Maximum scale must be greater than minimum scale');
+        return;
+      }
       onSave({
-        type: questionType,
-        text: questionText.trim(),
-        required,
+        ...baseQuestion,
+        minScale,
+        maxScale,
+        minLabel: minLabel.trim(),
+        maxLabel: maxLabel.trim(),
       });
+    } else {
+      // open-ended, date, time, email, phone, number, url
+      onSave(baseQuestion);
     }
   };
 
@@ -70,9 +91,10 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
       {/* Question Type */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-3">
-          Soru Tipi
+          Question Type
         </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {/* Multiple Choice */}
           <label className="relative cursor-pointer">
             <input
               type="radio"
@@ -81,31 +103,19 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
               onChange={(e) => setQuestionType(e.target.value)}
               className="sr-only"
             />
-            <div className={`flex flex-col items-center gap-3 p-5 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
+            <div className={`flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
               questionType === 'multiple-choice'
                 ? 'border-blue-500 bg-blue-50 shadow-sm'
                 : 'border-gray-200 hover:border-blue-300'
             }`}>
-              <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all ${
-                questionType === 'multiple-choice'
-                  ? 'border-blue-500 bg-blue-500'
-                  : 'border-gray-300 bg-gray-50'
-              }`}>
-                {questionType === 'multiple-choice' ? (
-                  <div className="w-4 h-4 bg-white rounded-full"></div>
-                ) : (
-                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="8" strokeWidth={2} />
-                  </svg>
-                )}
-              </div>
+              <div className="text-2xl">○</div>
               <div className="text-center">
-                <div className="font-semibold text-gray-700 text-sm">Tek Seçim</div>
-                <div className="text-xs text-gray-500">Bir seçenek</div>
+                <div className="font-semibold text-gray-700 text-xs">Single Choice</div>
               </div>
             </div>
           </label>
-          
+
+          {/* Multiple Select */}
           <label className="relative cursor-pointer">
             <input
               type="radio"
@@ -114,33 +124,40 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
               onChange={(e) => setQuestionType(e.target.value)}
               className="sr-only"
             />
-            <div className={`flex flex-col items-center gap-3 p-5 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
+            <div className={`flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
               questionType === 'multiple-select'
                 ? 'border-emerald-500 bg-emerald-50 shadow-sm'
                 : 'border-gray-200 hover:border-emerald-300'
             }`}>
-              <div className={`w-14 h-14 rounded-xl border-2 flex items-center justify-center transition-all ${
-                questionType === 'multiple-select'
-                  ? 'border-emerald-500 bg-emerald-500'
-                  : 'border-gray-300 bg-gray-50'
-              }`}>
-                {questionType === 'multiple-select' ? (
-                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <rect x="6" y="6" width="12" height="12" rx="2" strokeWidth={2} />
-                  </svg>
-                )}
-              </div>
+              <div className="text-2xl">☑</div>
               <div className="text-center">
-                <div className="font-semibold text-gray-700 text-sm">Çoklu Seçim</div>
-                <div className="text-xs text-gray-500">Birden fazla</div>
+                <div className="font-semibold text-gray-700 text-xs">Multiple Select</div>
               </div>
             </div>
           </label>
-          
+
+          {/* Dropdown */}
+          <label className="relative cursor-pointer">
+            <input
+              type="radio"
+              value="dropdown"
+              checked={questionType === 'dropdown'}
+              onChange={(e) => setQuestionType(e.target.value)}
+              className="sr-only"
+            />
+            <div className={`flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
+              questionType === 'dropdown'
+                ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                : 'border-gray-200 hover:border-indigo-300'
+            }`}>
+              <div className="text-2xl">▼</div>
+              <div className="text-center">
+                <div className="font-semibold text-gray-700 text-xs">Dropdown</div>
+              </div>
+            </div>
+          </label>
+
+          {/* Open-ended */}
           <label className="relative cursor-pointer">
             <input
               type="radio"
@@ -149,29 +166,98 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
               onChange={(e) => setQuestionType(e.target.value)}
               className="sr-only"
             />
-            <div className={`flex flex-col items-center gap-3 p-5 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
+            <div className={`flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
               questionType === 'open-ended'
                 ? 'border-purple-500 bg-purple-50 shadow-sm'
                 : 'border-gray-200 hover:border-purple-300'
             }`}>
-              <div className={`w-14 h-14 rounded-xl border-2 flex items-center justify-center transition-all ${
-                questionType === 'open-ended'
-                  ? 'border-purple-500 bg-purple-500'
-                  : 'border-gray-300 bg-gray-50'
-              }`}>
-                {questionType === 'open-ended' ? (
-                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-                  </svg>
-                ) : (
-                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-                  </svg>
-                )}
-              </div>
+              <div className="text-2xl">✏</div>
               <div className="text-center">
-                <div className="font-semibold text-gray-700 text-sm">Açık Uçlu</div>
-                <div className="text-xs text-gray-500">Serbest metin</div>
+                <div className="font-semibold text-gray-700 text-xs">Open-ended</div>
+              </div>
+            </div>
+          </label>
+
+          {/* Rating Scale */}
+          <label className="relative cursor-pointer">
+            <input
+              type="radio"
+              value="rating-scale"
+              checked={questionType === 'rating-scale'}
+              onChange={(e) => setQuestionType(e.target.value)}
+              className="sr-only"
+            />
+            <div className={`flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
+              questionType === 'rating-scale'
+                ? 'border-yellow-500 bg-yellow-50 shadow-sm'
+                : 'border-gray-200 hover:border-yellow-300'
+            }`}>
+              <div className="text-2xl">★</div>
+              <div className="text-center">
+                <div className="font-semibold text-gray-700 text-xs">Rating Scale</div>
+              </div>
+            </div>
+          </label>
+
+          {/* Linear Scale */}
+          <label className="relative cursor-pointer">
+            <input
+              type="radio"
+              value="linear-scale"
+              checked={questionType === 'linear-scale'}
+              onChange={(e) => setQuestionType(e.target.value)}
+              className="sr-only"
+            />
+            <div className={`flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
+              questionType === 'linear-scale'
+                ? 'border-orange-500 bg-orange-50 shadow-sm'
+                : 'border-gray-200 hover:border-orange-300'
+            }`}>
+              <div className="text-2xl">━</div>
+              <div className="text-center">
+                <div className="font-semibold text-gray-700 text-xs">Linear Scale</div>
+              </div>
+            </div>
+          </label>
+
+          {/* Date */}
+          <label className="relative cursor-pointer">
+            <input
+              type="radio"
+              value="date"
+              checked={questionType === 'date'}
+              onChange={(e) => setQuestionType(e.target.value)}
+              className="sr-only"
+            />
+            <div className={`flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
+              questionType === 'date'
+                ? 'border-pink-500 bg-pink-50 shadow-sm'
+                : 'border-gray-200 hover:border-pink-300'
+            }`}>
+              <div className="text-2xl">📅</div>
+              <div className="text-center">
+                <div className="font-semibold text-gray-700 text-xs">Date</div>
+              </div>
+            </div>
+          </label>
+
+          {/* Time */}
+          <label className="relative cursor-pointer">
+            <input
+              type="radio"
+              value="time"
+              checked={questionType === 'time'}
+              onChange={(e) => setQuestionType(e.target.value)}
+              className="sr-only"
+            />
+            <div className={`flex flex-col items-center gap-2 p-4 bg-white border-2 rounded-xl transition-all hover:shadow-md ${
+              questionType === 'time'
+                ? 'border-cyan-500 bg-cyan-50 shadow-sm'
+                : 'border-gray-200 hover:border-cyan-300'
+            }`}>
+              <div className="text-2xl">🕐</div>
+              <div className="text-center">
+                <div className="font-semibold text-gray-700 text-xs">Time</div>
               </div>
             </div>
           </label>
@@ -181,12 +267,12 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
       {/* Question Text */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Soru Metni
+          Question Text
         </label>
         <textarea
           value={questionText}
           onChange={(e) => setQuestionText(e.target.value)}
-          placeholder="Sorunuzu buraya yazın..."
+          placeholder="Enter your question here..."
           rows="3"
           className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
           required
@@ -211,15 +297,71 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
               )}
             </div>
           </div>
-          <span className="text-gray-700 font-medium">Bu soru zorunlu mu?</span>
+          <span className="text-gray-700 font-medium">Is this question required?</span>
         </label>
       </div>
 
-      {/* Options for multiple choice and multiple select */}
-      {(questionType === 'multiple-choice' || questionType === 'multiple-select') && (
+      {/* Scale configuration for rating and linear scales */}
+      {(questionType === 'rating-scale' || questionType === 'linear-scale') && (
+        <div className="space-y-4 p-4 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border border-gray-200">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Minimum Value
+              </label>
+              <input
+                type="number"
+                value={minScale}
+                onChange={(e) => setMinScale(parseInt(e.target.value) || 1)}
+                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Maximum Value
+              </label>
+              <input
+                type="number"
+                value={maxScale}
+                onChange={(e) => setMaxScale(parseInt(e.target.value) || 5)}
+                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Min Label (Optional)
+              </label>
+              <input
+                type="text"
+                value={minLabel}
+                onChange={(e) => setMinLabel(e.target.value)}
+                placeholder="e.g., Poor"
+                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Max Label (Optional)
+              </label>
+              <input
+                type="text"
+                value={maxLabel}
+                onChange={(e) => setMaxLabel(e.target.value)}
+                placeholder="e.g., Excellent"
+                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Options for multiple choice, multiple select, and dropdown */}
+      {(questionType === 'multiple-choice' || questionType === 'multiple-select' || questionType === 'dropdown') && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-3">
-            Seçenekler (En az 2 adet)
+            Options (At least 2)
           </label>
           <div className="space-y-3">
             {options.map((option, index) => (
@@ -231,7 +373,7 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
                   type="text"
                   value={option}
                   onChange={(e) => handleOptionChange(index, e.target.value)}
-                  placeholder={`Seçenek ${String.fromCharCode(65 + index)}`}
+                  placeholder={`Option ${String.fromCharCode(65 + index)}`}
                   className="flex-1 px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
                 {options.length > 2 && (
@@ -239,7 +381,7 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
                     type="button"
                     onClick={() => handleRemoveOption(index)}
                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                    title="Seçeneği kaldır"
+                    title="Remove option"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -257,7 +399,7 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
             </svg>
-            Seçenek Ekle
+            Add Option
           </button>
         </div>
       )}
@@ -268,14 +410,14 @@ const QuestionEditor = ({ question, onSave, onCancel }) => {
           type="submit"
           className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/30 hover:shadow-xl hover:scale-105"
         >
-          {question ? '✓ Güncelle' : '✓ Kaydet'}
+          {question ? '✓ Update' : '✓ Save'}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="px-6 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all"
         >
-          İptal
+          Cancel
         </button>
       </div>
     </form>

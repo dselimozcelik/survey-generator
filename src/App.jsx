@@ -1,15 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SurveyList from './components/SurveyList';
 import SurveyEditor from './components/SurveyEditor';
 import SurveyPreview from './components/SurveyPreview';
 import CreateSurveyModal from './components/CreateSurveyModal';
+import LoginForm from './components/LoginForm';
 import useSurveyStore from './store/surveyStore';
+import useAuthStore from './store/authStore';
 
 function App() {
   const [currentView, setCurrentView] = useState('list'); // 'list', 'editor', 'preview'
   const [selectedSurveyId, setSelectedSurveyId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const { setCurrentSurvey } = useSurveyStore();
+  const { setCurrentSurvey, loadSurveys } = useSurveyStore();
+  const { user, loading: authLoading, initialize } = useAuthStore();
+
+  // Initialize auth on mount
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  // Load surveys when user is authenticated
+  useEffect(() => {
+    if (user) {
+      loadSurveys();
+    }
+  }, [user, loadSurveys]);
 
   const handleSelectSurvey = (surveyId, view = 'editor') => {
     setSelectedSurveyId(surveyId);
@@ -29,7 +44,9 @@ function App() {
 
   const handleSurveyCreated = (surveyId) => {
     setShowCreateModal(false);
-    handleSelectSurvey(surveyId, 'editor');
+    if (surveyId) {
+      handleSelectSurvey(surveyId, 'editor');
+    }
   };
 
   const handlePreview = (surveyId) => {
@@ -42,6 +59,24 @@ function App() {
     setCurrentView('editor');
   };
 
+  // Show loading spinner while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!user) {
+    return <LoginForm />;
+  }
+
+  // Show main app if authenticated
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 relative overflow-hidden">
       {/* Background decorations */}
